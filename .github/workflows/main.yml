@@ -5,7 +5,7 @@ on:
     # 每天UTC时间0点执行（对应北京时间8点）
     - cron: '0 0 * * *'
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
 
 jobs:
