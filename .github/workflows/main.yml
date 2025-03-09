@@ -19,4 +19,5 @@ jobs:
           URL: ${{ secrets.URL }}
           AUTH: ${{ secrets.AUTH }}
         run: |
+          pip install -r requirements.txt
           python cross_bj.py 
