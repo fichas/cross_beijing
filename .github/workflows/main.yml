@@ -1,5 +1,6 @@
 # 添加触发条件
 on:
+  workflow_dispatch:  # 添加手动触发事件
   schedule:
     # 每天UTC时间0点执行（对应北京时间8点）
     - cron: '0 0 * * *'
