@@ -13,3 +13,5 @@ BARK_KEY = os.environ.get("BARK_KEY")
 
 BJT_PHONE = os.environ.get("BJT_PHONE")
 BJT_PWD = os.environ.get("BJT_PWD")
+
+print(URL, AUTH, BARK_KEY, BJT_PHONE, BJT_PWD)
