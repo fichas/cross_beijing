@@ -1,4 +1,5 @@
 ddddocr
+dotenv
 pycryptodome==3.20.0
 loguru
 requests
