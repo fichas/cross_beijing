@@ -1,0 +1,23 @@
+# 添加触发条件
+# on:
+#   workflow_dispatch:  # 添加手动触发事件
+#   schedule:
+#     # 每天UTC时间0点执行（对应北京时间8点）
+#     - cron: '0 0 * * *'
+#   push:
+#     branches: [ master ]
+#   pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run script
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          URL: ${{ secrets.URL }}
+          AUTH: ${{ secrets.AUTH }}
+        run: |
+          pip install -r requirements.txt
+          python cross_bj.py 
