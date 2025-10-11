@@ -86,6 +86,7 @@ class CrossBJ:
             "jsrxm": data["jsrxm"],  # 车主姓名
             "jszh": data["jszh"],  # 车主身份证号
             "hphm": data["hphm"],  # 车牌号
+            "sfzj": 1,
             "xxdz": "北京动物园",
         }
         return request(INSERT_APPLY_RECORD_URL, payload)
