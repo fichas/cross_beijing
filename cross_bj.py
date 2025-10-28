@@ -1,118 +1,167 @@
-import sys
-import json
-import requests
+
 from datetime import datetime, timedelta
 from loguru import logger
-from utils import days_between_dates, get_future_date, bot, logger
-from config import URL, AUTH
+from utils import  get_future_date, Bark, logger
+from config import URL, get_user_configs
+from jtgl_manager import ApplyRecordManager, VehicleManager, UserManager
+from model import NewApplyForm, RecordInfo, StateData
+from config import UserConfig
 
-STATE_LIST_URL = f"https://{URL}/pro/applyRecordController/stateList"
-INSERT_APPLY_RECORD_URL = (
-    f"https://{URL}/pro/applyRecordController/insertApplyRecord"
-)
-
-def request(url, data) -> dict:
-    payload = json.dumps(data)
-    headers = {"Authorization": AUTH, "Content-Type": "application/json"}
-    try:
-        res = requests.post(url, headers=headers, data=payload)
-        result = res.json()
-        if result["code"] != 200:
-            logger.error(
-                f"请求失败，状态码: {result['code']}，错误信息: {result['msg']}"
-            )
-            sys.exit(1)
-    except Exception as e:
-        logger.error(f"请求失败，错误信息: {e}")
-        bot.send("进京证续签失败", f"请求失败，错误信息: {e}")
-        sys.exit(1)
-    return result
 
 class CrossBJ:
-    def __init__(self):
-        self.state_data = None
+    def __init__(self, user: UserConfig):
+        self.apply_manager = ApplyRecordManager(f"https://{URL}", user.auth)
+        self.vehicle_manager = VehicleManager(f"https://{URL}", user.auth)
+        self.user_manager = UserManager(f"https://{URL}", user.auth)
+        self.state_data: StateData | None = None
+        self.user = user
+        self.bot = Bark(user.bark_token)
 
-    def get_state_data(self):
-        self.state_data = request(STATE_LIST_URL, data={})
+    def get_state_data(self) -> StateData:
+        """获取状态数据"""
+        if self.state_data is not None:
+            return self.state_data
+        self.state_data = self.apply_manager.get_state_data()
         return self.state_data
 
-    def parse_state_data(self):
-        if self.state_data == None:
+    def get_latest_record(self) -> RecordInfo:
+        """解析状态数据，获取最新的申请记录"""
+        if self.state_data is None:
             self.get_state_data()
-        data = (
-            self.state_data["data"]["bzclxx"][0]["ecbzxx"][0]
-            if self.state_data["data"]["bzclxx"][0]["ecbzxx"]
-            else self.state_data["data"]["bzclxx"][0]["bzxx"][0]
-        )
-        return data
+        # 使用新的数据模型快速获取记录
+        if self.state_data is None:
+            raise Exception(f"[{self.user.name}]没有找到状态数据")
+        record = self.state_data.get_latest_record()
+        if record is None:
+            logger.info(f"[{self.user.name}]没有找到有效的申请记录")
 
-    def need_renew(self):
-        data = self.parse_state_data()
-        today = datetime.now().strftime("%Y-%m-%d")
+        return record
 
-        days_difference = days_between_dates(
-            today, data["yxqz"]
-        )  # 当前日期与有效期之间的天数
-        if data["blztmc"] in ["审核通过(生效中)", "审核中", "审核通过(待生效)"]:
-            if data["blztmc"] == "审核通过(生效中)" and days_difference <= 1:
-                return (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-            else:
-                return None
-        return today
+    def need_apply(self):
+        """检查是否需要申请进京证，返回需要申请的日期，如果不需要申请则返回None"""
+        try:
+            record = self.get_latest_record()
+            today = datetime.now().strftime("%Y-%m-%d")
+            if record is None:
+                # 新车 没有任何申请记录 直接返回今天
+                return today
 
-    def exec_renew(self, jjzzl="六环内"):
-        jjrq = self.need_renew()
-    
-        if jjrq is None:
+            # 计算剩余天数
+            remaining_days = record.calc_remaining_days()
+            status = record.get_status_description()
+            # 检查状态和剩余天数
+            if status in ["审核通过(生效中)", "审核中", "审核通过(待生效)"]:
+                if status == "审核通过(生效中)" and remaining_days <= 1:
+                    # 审核通过(生效中) 且剩余天数小于等于1天 提前申请明天的进京证
+                    return (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+                else:
+                    return None
+            # 其他情况 直接返回今天，审核失败这种就需要重新触发重新申请
+            return today
+        except Exception as e:
+            logger.error(f"[{self.user.name}]检查续签需求失败: {e}")
             return None
-        data = self.parse_state_data()
-        
-        payload = {
-            "sqdzgdjd": "116.4",  # 进京经度
-            "sqdzgdwd": "39.9",  # 进京纬度
-            "sqdzbdjd": "116.273348",  # 进京目的地经度
-            "sqdzbdwd": "40.040219",  # 进京目的地纬度
-            "txrxx": [],
-            "hpzl": data["hpzl"],  # 车牌类型
-            "jjdq": "010",  # 进京目的地地区
-            "jjmd": "06",  # 进京目的地
-            "jjzzl": "01" if jjzzl == "六环内" else "02",  # 进京证类型
-            "jjlk": "00606",  # 进京路况
-            "jjmdmc": "其它",  # 进京目的地名称
-            "jjlkmc": "其他道路",  # 进京路况名称
-            "applyIdOld": data["applyId"],  # 续办申请id
-            "jjrq": jjrq,  # 进京日期(申请生效日期)
-            "vId": data["vId"],  # 车辆识别代号
-            "jsrxm": data["jsrxm"],  # 车主姓名
-            "jszh": data["jszh"],  # 车主身份证号
-            "hphm": data["hphm"],  # 车牌号
-            "sfzj": 1,
-            "xxdz": "北京动物园",
-        }
-        return request(INSERT_APPLY_RECORD_URL, payload)
-    
+
+    def exec_apply(self, form_type="六环内"):
+        """执行续签操作"""
+        apply_date = self.need_apply()
+
+        if apply_date is None:
+            return None
+
+        try:
+            # 获取车辆和用户信息
+            vehicles = self.vehicle_manager.list_vehicles()
+            user_info = self.user_manager.get_user_info()
+
+            if not vehicles:
+                raise Exception(f"[{self.user.name}]没有找到车辆信息")
+
+            # 创建申请表单
+            apply_form = NewApplyForm(
+                vehicle_info=vehicles[0],
+                user_info=user_info,
+                apply_date=apply_date,
+                destination="北京动物园",
+                form_type=form_type,
+            )
+
+            # 提交申请
+            return self.apply_manager.do_apply_record(apply_form)
+
+        except Exception as e:
+            logger.error(f"[{self.user.name}]续签执行失败: {e}")
+            self.bot.send("进京证续签失败", f"续签执行失败: {e}")
+            return None
+
+    def get_current_status(self):
+        """获取当前状态信息"""
+        try:
+            # 使用新的数据模型快速获取信息
+            record = self.get_latest_record()
+            if record is None:
+                raise Exception("没有找到有效的申请记录")
+
+            return {
+                "start_date": record.yxqs,
+                "end_date": (
+                    record.yxqz if record.yxqz else get_future_date(record.yxqs, 6)
+                ),
+                "status": record.blztmc,
+                "apply_type": record.jjzzlmc,
+                "apply_date": record.sqsj,
+                "remaining_days": record.calc_remaining_days(),
+                "quota_info": self.state_data.get_quota_info(),
+                "can_apply": self.state_data.can_apply(),
+            }
+        except Exception as e:
+            logger.error(f"获取状态信息失败: {e}")
+            return None
+
+    def exec(self):
+        resp = self.exec_apply()
+        if resp is None:
+            msg = "无需续签"
+        else:
+            msg = "续签成功" if resp["code"] == 200 else "续签失败"
+        status = self.get_current_status()
+        if status is None:
+            logger.error(f"[{self.user.name}]无法获取状态信息")
+            return
+
+        # 格式化信息
+        start_date = status["start_date"]
+        end_date = status["end_date"]
+        status_text = status["status"]
+        apply_type = status["apply_type"]
+        apply_date = status["apply_date"]
+        remaining_days = status["remaining_days"]
+        quota_info = status["quota_info"]
+
+        formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 构建消息
+        title = f"进京证{msg}: {start_date[5:]}~{end_date[5:]}"
+        msg_content = f"{msg}\n"
+        msg_content += f"状态: {status_text}\n"
+        msg_content += f"有效期: {start_date}至{end_date}\n"
+        msg_content += f"剩余天数: {remaining_days}\n"
+        msg_content += f"类型: {apply_type}\n"
+        msg_content += f"申请时间: {apply_date}\n"
+        msg_content += f"执行时间: {formatted_time}\n"
+        if quota_info:
+            msg_content += f"剩余申请次数: {quota_info.get('remaining_times', 0)}\n"
+
+        logger.info(f"[{self.user.name}] {msg_content}")
+        self.bot.send(title, msg_content)
+
 
 def main():
-    cross_bj = CrossBJ()
-    resp = cross_bj.exec_renew()
-    if resp is None:
-        msg = "无需续签"
-    else:
-        msg = "续签成功" if resp["code"] == 200 else "续签失败"
-    cross_bj.get_state_data()
-    data = cross_bj.parse_state_data()
-    
-
-    yxqs = data["yxqs"] # 有效期开始时间    
-    yxqz = data["yxqz"] if data["yxqz"] else get_future_date(yxqs, 6) # 有效期结束时间
-    blztmc = data["blztmc"] # 状态
-    jjzzlmc = data["jjzzlmc"] # 进京证类型
-    sqsj = data["sqsj"] # 申请时间
-    formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 执行时间
-    title = f"进京证{msg}: {yxqs[5:]}~{yxqz[5:]}" # 标题    
-    msg = f"{msg}\n状态: {blztmc}\n有效期: {yxqs}至{yxqz}\n类型: {jjzzlmc}\n申请时间: {sqsj}\n执行时间: {formatted_time}" # 消息
-    logger.info(msg)
-    bot.send(title, msg)
+    user_configs = get_user_configs()
+    for user in user_configs:
+        cross_bj = CrossBJ(user)
+        cross_bj.exec()
+    logger.info("所有用户续签完成")
 
 
 if __name__ == "__main__":

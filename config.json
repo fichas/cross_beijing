@@ -1,0 +1,12 @@
+{
+    "url": "",
+    "users": [
+        {
+            "name": "示例用户",
+            "auth": "",
+            "bark_token": "",
+            "bjt_phone": "",
+            "bjt_pwd": ""
+        }
+    ]
+}

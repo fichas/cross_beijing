@@ -8,19 +8,20 @@ import requests
 from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 
-from config import BJT_PHONE, BJT_PWD
-from utils import get_url_params, logger, bot
+# BJT_PHONE和BJT_PWD现在通过UserConfig传递，不再从config导入
+from utils import get_url_params, logger, Bark
 
 ocr = ddddocr.DdddOcr(show_ad=False)
 ocr.set_ranges("0123456789")
 
 
 class BeijingTong(object):
-    def __init__(self):
+    def __init__(self, phone_num="", pwd="",bark_token=""):
         self.session = requests.Session()
-        self.phone_num = BJT_PHONE
-        self.pwd = BJT_PWD
+        self.phone_num = phone_num
+        self.pwd = pwd
         self.redirect_url = None
+        self.bot = Bark(bark_token)
 
     def get_pubkey(self):
         response = self.session.get(
@@ -70,10 +71,10 @@ class BeijingTong(object):
                     code = json_data.get("meta", {}).get("code") 
                     if code == "5019":
                         logger.error(f"登陆失败, 重试次数: {retry_count}，错误信息: {json_data.get('meta', {}).get('message')}")
-                        bot.send("进京证", f"登陆失败, 重试次数: {retry_count}，错误信息: {json_data.get('meta', {}).get('message')}")
+                        self.bot.send("进京证", f"登陆失败, 重试次数: {retry_count}，错误信息: {json_data.get('meta', {}).get('message')}")
                         return None
                     elif code == "5016":
-                        bot.send("进京证", f"登陆失败, 重试次数: {retry_count}，错误信息: {json_data.get('meta', {}).get('message')}")
+                        self.bot.send("进京证", f"登陆失败, 重试次数: {retry_count}，错误信息: {json_data.get('meta', {}).get('message')}")
                         raise Exception(f"{json_data.get('meta', {}).get('message')}")
                     auth_url = json_data.get("data", {}).get("redirectUrl", "")
                 else:
@@ -121,22 +122,6 @@ def get_token(auth_url):
     else:
         raise ValueError("无法获取token")
 
-
-def save_env_token(token):
-    """将token写入.env文件"""
-    with open('.env', 'a+') as f:  # 追加模式写入
-        f.seek(0)
-        content = f.read()
-        # 如果已存在则更新，不存在则追加
-        if 'AUTH' in content:
-            content = '\n'.join(
-                [line if not line.startswith('AUTH=') else f'AUTH="{token}"' 
-                 for line in content.split('\n')]
-            )
-            f.truncate(0)
-            f.write(content)
-        else:
-            f.write(f'\nAUTH="{token}"\n')
 
 
 

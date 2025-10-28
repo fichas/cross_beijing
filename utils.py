@@ -5,8 +5,6 @@ from urllib.parse import urlparse
 import requests
 from loguru import logger
 
-from config import BARK_KEY
-
 
 class SendMessage(ABC):
     @abstractmethod
@@ -15,7 +13,7 @@ class SendMessage(ABC):
 
 
 class Bark(SendMessage):
-    def __init__(self, key=BARK_KEY):
+    def __init__(self, key=""):
         self.key = key
 
     def send(self, title, msg):
@@ -26,7 +24,6 @@ class Bark(SendMessage):
         else:
             print("未配置推送密钥，不发送推送")
 
-bot = Bark()
 
 def get_url_params(url, key):
     """原始参数值获取"""
