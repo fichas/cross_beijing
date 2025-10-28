@@ -3,11 +3,12 @@ import traceback
 from loguru import logger
 from model import VehicleInfo, UserInfo, ApplyForm, UserDetailInfo, NewApplyForm, StateData
 from constant import SOURCE
+from config import config_manager
 
 
 class JTGLManager:
-    def __init__(self, url, token):
-        self.url = url
+    def __init__(self, token):
+        self.url = config_manager.get_decrypted_url()
         self.token = token
         self._new_session()
 
@@ -18,6 +19,7 @@ class JTGLManager:
         )
 
     def _call_api(self, url, data=None, headers=None, method="POST"):
+        url = f"{self.url}/{url}"
         if headers is None:
             headers = self.session.headers
         else:
@@ -32,19 +34,19 @@ class JTGLManager:
 
 class VehicleManager(JTGLManager):
     def list_vehicles(self) -> list[VehicleInfo]:
-        url = f"{self.url}/pro//vehicleController/getUserIdInfo"
+        url = f"pro/vehicleController/getUserIdInfo"
         response = self._call_api(url, data={})
         return [
             VehicleInfo.from_api_response(vehicle) for vehicle in response.get("data")
         ]
 
     def delete_vehicle(self, vId):
-        url = f"{self.url}/pro//relationController/deleteRelation"
+        url = f"pro/relationController/deleteRelation"
         response = self._call_api(url, data={"vId": vId})
         return response
 
     def add_vehicle(self, vehicle_info: VehicleInfo):
-        url = f"{self.url}/pro//relationController/add"
+        url = f"pro/relationController/add"
         payload = {"relation": {}, "vehicle": vehicle_info.to_dict()}
         response = self._call_api(url, data=payload)
         return response
@@ -52,12 +54,12 @@ class VehicleManager(JTGLManager):
 
 class UserManager(JTGLManager):
     def get_user_info(self) -> UserInfo:
-        url = f"{self.url}/pro/applyRecordController/getJsrxx"
+        url = f"pro/applyRecordController/getJsrxx"
         response = self._call_api(url, data={})
         return UserInfo.from_api_response(response.get("data"))
     def get_user_detail_info(self) -> UserDetailInfo:
         try:
-            url = f"{self.url}/auth/userController/loginUser?state=101000004071"
+            url = f"auth/userController/loginUser?state=101000004071"
             headers = {"Source": SOURCE}
             response = self._call_api(
                 url,
@@ -76,7 +78,7 @@ class UserManager(JTGLManager):
 class ApplyRecordManager(JTGLManager):
     def get_state_data(self) -> StateData:
         """获取状态数据"""
-        url = f"{self.url}/pro/applyRecordController/stateList"
+        url = f"pro/applyRecordController/stateList"
         response = self._call_api(url, data={})
         return StateData.from_api_response(response.get("data"))
     
@@ -86,11 +88,11 @@ class ApplyRecordManager(JTGLManager):
         else:
             return self.do_apply_record_v1(apply_form)
     def do_apply_record_v2(self, apply_form: NewApplyForm) -> dict:
-        url = f"{self.url}/pro/applyRecordController/insertApplyRecord"
+        url = f"pro/applyRecordController/insertApplyRecord"
         response = self._call_api(url, data=apply_form.to_api_payload())
         return response
     def do_apply_record_v1(self, apply_form: ApplyForm) -> dict:
-        url = f"{self.url}/pro/applyRecordController/insertApplyRecord"
+        url = f"pro/applyRecordController/insertApplyRecord"
         response = self._call_api(url, data=apply_form.to_api_payload())
         return response
 

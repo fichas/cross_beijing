@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from loguru import logger
 from utils import  get_future_date, Bark, logger
-from config import URL, get_user_configs
+from config import get_user_configs
 from jtgl_manager import ApplyRecordManager, VehicleManager, UserManager
 from model import NewApplyForm, RecordInfo, StateData
 from config import UserConfig
@@ -10,9 +10,9 @@ from config import UserConfig
 
 class CrossBJ:
     def __init__(self, user: UserConfig):
-        self.apply_manager = ApplyRecordManager(f"https://{URL}", user.auth)
-        self.vehicle_manager = VehicleManager(f"https://{URL}", user.auth)
-        self.user_manager = UserManager(f"https://{URL}", user.auth)
+        self.apply_manager = ApplyRecordManager(user.auth)
+        self.vehicle_manager = VehicleManager(user.auth)
+        self.user_manager = UserManager(user.auth)
         self.state_data: StateData | None = None
         self.user = user
         self.bot = Bark(user.bark_token)
@@ -159,10 +159,13 @@ class CrossBJ:
 def main():
     user_configs = get_user_configs()
     for user in user_configs:
-        cross_bj = CrossBJ(user)
-        cross_bj.exec()
+        logger.info(f"[{user.name}]开始续签")
+        try:
+            cross_bj = CrossBJ(user)
+            cross_bj.exec()
+        except Exception as e:
+            logger.error(f"[{user.name}]续签失败: {e}")
     logger.info("所有用户续签完成")
-
 
 if __name__ == "__main__":
     main()

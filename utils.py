@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
+import base64
+import os
+from cryptography.fernet import Fernet
 
 import requests
 from loguru import logger
@@ -62,3 +65,45 @@ def get_future_date(date_str, days):
     date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
     future_date = date_obj + timedelta(days=days)
     return future_date.strftime("%Y-%m-%d")
+
+
+def _get_or_create_key():
+    """获取或创建加密密钥"""
+    key_file = "url_key.key"
+    if os.path.exists(key_file):
+        with open(key_file, "rb") as f:
+            return f.read()
+    else:
+        key = Fernet.generate_key()
+        with open(key_file, "wb") as f:
+            f.write(key)
+        return key
+
+
+def encrypt_url(url: str) -> str:
+    """加密URL"""
+    if not url:
+        return ""
+    try:
+        key = _get_or_create_key()
+        fernet = Fernet(key)
+        encrypted_url = fernet.encrypt(url.encode())
+        return base64.b64encode(encrypted_url).decode()
+    except Exception as e:
+        logger.error(f"URL加密失败: {e}")
+        return ""
+
+
+def decrypt_url(encrypted_url: str) -> str:
+    """解密URL"""
+    if not encrypted_url:
+        return ""
+    try:
+        key = _get_or_create_key()
+        fernet = Fernet(key)
+        encrypted_data = base64.b64decode(encrypted_url.encode())
+        decrypted_url = fernet.decrypt(encrypted_data)
+        return decrypted_url.decode()
+    except Exception as e:
+        logger.error(f"URL解密失败: {e}")
+        return ""

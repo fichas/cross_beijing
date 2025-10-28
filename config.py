@@ -3,7 +3,7 @@ import json
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from bjt_login import BeijingTong, get_token
-from utils import logger
+from utils import logger, encrypt_url, decrypt_url
 
 # 通用配置，允许 None 值
 class AllowNoneConfig:
@@ -18,8 +18,16 @@ class UserConfig(BaseModel, AllowNoneConfig):
 
 
 class ConfigData(BaseModel):
-    url: str = Field(default="", description="接口地址")
+    url: str = Field(default="", description="接口地址（加密存储）")
     users: list[UserConfig] = Field(default=[], description="用户配置")
+    
+    def get_decrypted_url(self) -> str:
+        """获取解密后的URL"""
+        return decrypt_url(self.url)
+    
+    def set_encrypted_url(self, url: str):
+        """设置加密后的URL"""
+        self.url = encrypt_url(url)
 
 
 class ConfigManager:
@@ -41,6 +49,7 @@ class ConfigManager:
             logger.error(f"加载配置文件失败: {e}")
             raise
     
+
     def _save_config(self):
         """保存配置文件"""
         try:
@@ -146,14 +155,16 @@ class ConfigManager:
     def get_user_configs(self) -> list[UserConfig]:
         """获取用户配置列表"""
         return self.config_data.users if self.config_data else []
+    
+    def get_decrypted_url(self) -> str:
+        """获取解密后的URL"""
+        return self.config_data.get_decrypted_url() if self.config_data else ""
 
 
 # 创建全局配置管理器实例
 config_manager = ConfigManager()
 config = config_manager.get_config()
 
-URL = config.url
-assert URL, "url不能为空"
 
 def get_user_configs() -> list[UserConfig]:
     return config_manager.get_user_configs()
