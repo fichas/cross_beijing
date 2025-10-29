@@ -9,19 +9,20 @@ from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 
 # BJT_PHONE和BJT_PWD现在通过UserConfig传递，不再从config导入
-from utils import get_url_params, logger, Bark
+from utils import get_url_params, logger, AppriseNotifier
 
 ocr = ddddocr.DdddOcr(show_ad=False)
 ocr.set_ranges("0123456789")
 
 
 class BeijingTong(object):
-    def __init__(self, phone_num="", pwd="",bark_token=""):
+    def __init__(self, phone_num="", pwd="", notify_urls=None):
         self.session = requests.Session()
         self.phone_num = phone_num
         self.pwd = pwd
         self.redirect_url = None
-        self.bot = Bark(bark_token)
+        # 使用Apprise推送通知
+        self.bot = AppriseNotifier(notify_urls)
 
     def get_pubkey(self):
         response = self.session.get(

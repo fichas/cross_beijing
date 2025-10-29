@@ -5,7 +5,8 @@ import base64
 import os
 from cryptography.fernet import Fernet
 
-import requests
+
+import apprise
 from loguru import logger
 
 
@@ -15,17 +16,53 @@ class SendMessage(ABC):
         pass
 
 
-class Bark(SendMessage):
-    def __init__(self, key=""):
-        self.key = key
+class AppriseNotifier(SendMessage):
+    def __init__(self, urls=None):
+        """
+        初始化Apprise通知器
+        
+        Args:
+            urls: 推送服务URL列表，支持多种推送方式
+            详见: https://github.com/caronc/apprise
+                例如: [
+                    "barks://api.day.app/your_bark_token",
+                    "tgram://bottoken/ChatID",
+                    "email://user:pass@smtp.gmail.com:587",
+                    "slack://TokenA/TokenB/TokenC/",
+                    "discord://webhook_id/webhook_token",
+                    "webhook://your_webhook_url"
+                ]
+        """
+        self.apobj = apprise.Apprise()
+        if urls:
+            if isinstance(urls, str):
+                urls = [urls]
+            for url in urls:
+                if url.strip():
+                    self.apobj.add(url.strip())
 
     def send(self, title, msg):
-        if self.key:
-            requests.post(
-                f"https://api.day.app/{self.key}/{title}/{msg}?isArchive=1&group=进京证"
+        """发送通知"""
+        if not self.apobj:
+            print("未配置推送服务，不发送推送")
+            return
+        
+        try:
+            # 发送通知，支持多种推送方式
+            result = self.apobj.notify(
+                body=msg,
+                title=title
             )
-        else:
-            print("未配置推送密钥，不发送推送")
+            if result:
+                logger.info(f"推送通知发送成功: {title}")
+            else:
+                logger.warning("推送通知发送失败")
+        except Exception as e:
+            logger.error(f"推送通知发送异常: {e}")
+            import traceback
+            logger.error(f"详细错误信息: {traceback.format_exc()}")
+
+
 
 
 def get_url_params(url, key):

@@ -12,9 +12,10 @@ class AllowNoneConfig:
 class UserConfig(BaseModel, AllowNoneConfig):
     name: str = Field(default="", description="用户名")
     auth: str = Field(default="", description="认证token")
-    bark_token: str = Field(default="", description="bark token")
     bjt_phone: str = Field(default="", description="北京通手机号")
     bjt_pwd: str = Field(default="", description="北京通密码")
+    # 推送配置，支持多种推送方式
+    notify_urls: list[str] = Field(default=[], description="推送服务URL列表")
 
 
 class ConfigData(BaseModel):
@@ -76,7 +77,7 @@ class ConfigManager:
             logger.info(f"开始为用户 {user.name} 获取认证token")
             
             # 创建北京通登录实例
-            bjt = BeijingTong(user.bjt_phone, user.bjt_pwd, user.bark_token)
+            bjt = BeijingTong(user.bjt_phone, user.bjt_pwd, user.notify_urls)
             
             # 执行登录
             auth_url = bjt.login()

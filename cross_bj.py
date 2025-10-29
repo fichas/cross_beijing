@@ -1,7 +1,7 @@
 
 from datetime import datetime, timedelta
 from loguru import logger
-from utils import  get_future_date, Bark, logger
+from utils import  get_future_date, AppriseNotifier, logger
 from config import get_user_configs
 from jtgl_manager import ApplyRecordManager, VehicleManager, UserManager
 from model import NewApplyForm, RecordInfo, StateData
@@ -15,7 +15,8 @@ class CrossBJ:
         self.user_manager = UserManager(user.auth)
         self.state_data: StateData | None = None
         self.user = user
-        self.bot = Bark(user.bark_token)
+        # 使用Apprise推送通知
+        self.bot = AppriseNotifier(user.notify_urls)
 
     def get_state_data(self) -> StateData:
         """获取状态数据"""
