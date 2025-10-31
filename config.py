@@ -14,6 +14,7 @@ class UserConfig(BaseModel, AllowNoneConfig):
     auth: str = Field(default="", description="认证token")
     bjt_phone: str = Field(default="", description="北京通手机号")
     bjt_pwd: str = Field(default="", description="北京通密码")
+    entry_type: str = Field(default="六环内", description="进京证类型")
     # 推送配置，支持多种推送方式
     notify_urls: list[str] = Field(default=[], description="推送服务URL列表")
 

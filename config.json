@@ -6,6 +6,7 @@
             "auth": "",
             "bjt_phone": "",
             "bjt_pwd": "",
+            "entry_type": "六环外",
             "notify_urls": [
                 "barks://api.day.app/your_bark_token",
                 "tgram://bottoken/ChatID"

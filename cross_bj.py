@@ -119,8 +119,8 @@ class CrossBJ:
             logger.error(f"获取状态信息失败: {e}")
             return None
 
-    def exec(self):
-        resp = self.exec_apply()
+    def exec(self, form_type="六环内"):
+        resp = self.exec_apply(form_type)
         if resp is None:
             msg = "无需续签"
         else:
@@ -163,7 +163,7 @@ def main():
         logger.info(f"[{user.name}]开始续签")
         try:
             cross_bj = CrossBJ(user)
-            cross_bj.exec()
+            cross_bj.exec(user.entry_type)
         except Exception as e:
             logger.error(f"[{user.name}]续签失败: {e}")
     logger.info("所有用户续签完成")

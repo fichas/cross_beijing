@@ -56,9 +56,10 @@ curl -L -o url_key.key https://github.com/fichas/cross_beijing/releases/download
             "auth": "",
             "bjt_phone": "你的北京通手机号",
             "bjt_pwd": "你的北京通密码",
+            "entry_type": "六环内",
             "notify_urls": [
                 "bark://api.day.app/your_bark_token",
-                "telegram://bot_token@telegram/?chat_id=your_chat_id"
+                "tgram://bottoken/ChatID"
             ]
         },
         {
@@ -66,9 +67,10 @@ curl -L -o url_key.key https://github.com/fichas/cross_beijing/releases/download
             "auth": "",
             "bjt_phone": "另一个北京通手机号",
             "bjt_pwd": "另一个北京通密码",
+            "entry_type": "六环外",
             "notify_urls": [
                 "email://user:pass@gmail.com",
-                "slack://token@workspace/channel"
+                "slack://TokenA/TokenB/TokenC/"
             ]
         }
     ]
@@ -82,7 +84,7 @@ curl -L -o url_key.key https://github.com/fichas/cross_beijing/releases/download
 - `bjt_phone`: 北京通手机号
 - `bjt_pwd`: 北京通密码
 - `notify_urls`: 推送服务URL列表（支持多种推送方式）
-
+- `entry_type`: 进京证类型（六环内/六环外）
 ### 3. 推送服务配置
 
 #### 3.1 支持的推送方式
