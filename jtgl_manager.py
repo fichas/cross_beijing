@@ -1,6 +1,6 @@
 import requests
 import traceback
-from loguru import logger
+from utils import logger
 from model import VehicleInfo, UserInfo, ApplyForm, UserDetailInfo, NewApplyForm, StateData
 from constant import SOURCE
 from config import config_manager

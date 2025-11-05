@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet
 import apprise
 from loguru import logger
 
+logger.add("logs/cross_bj.log", rotation="100 MB", retention="30 days")
 
 class SendMessage(ABC):
     @abstractmethod

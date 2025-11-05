@@ -1,6 +1,6 @@
 
 from datetime import datetime, timedelta
-from loguru import logger
+from utils import logger
 from utils import  get_future_date, AppriseNotifier, logger
 from config import get_user_configs
 from jtgl_manager import ApplyRecordManager, VehicleManager, UserManager
