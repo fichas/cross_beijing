@@ -1,5 +1,7 @@
 # 进京证自动续签工具
 
+> **推荐使用 Node.js CLI 版本: [cross-bj](https://github.com/fichas/cross_beijing_cli)** — `npm install -g cross-bj` 即装即用，零 Python 依赖，支持 AI Agent Skills 调用。
+
 一个基于Python的进京证自动续签工具，支持多用户、自动登录、状态监控和消息推送。
 
 ## 免责声明
